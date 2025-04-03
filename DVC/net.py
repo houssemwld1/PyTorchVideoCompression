@@ -14,25 +14,9 @@ import logging
 from torch.nn.parameter import Parameter
 from subnet import *
 import torchac
-## commebts
+from subnet.endecoder import * 
+# commebts
 
-def save_model(model, iter):
-    torch.save(model.state_dict(), "./snapshot/iter{}.model".format(iter))
-
-def load_model(model, f):
-    with open(f, 'rb') as f:
-        pretrained_dict = torch.load(f)
-        model_dict = model.state_dict()
-        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-        model_dict.update(pretrained_dict)
-        model.load_state_dict(model_dict)
-    f = str(f)
-    if f.find('iter') != -1 and f.find('.model') != -1:
-        st = f.find('iter') + 4
-        ed = f.find('.model', st)
-        return int(f[st:ed])
-    else:
-        return 0
 
 
 
@@ -40,7 +24,7 @@ class VideoCompressor(nn.Module):
     def __init__(self):
         super(VideoCompressor, self).__init__()
         # self.imageCompressor = ImageCompressor()
-        self.opticFlow = ME_Spynet()
+        self.opticFlow = ME_GMFlow()  # optical flow using GMFlow better than spynet faster than raft
         self.mvEncoder = Analysis_mv_net()
         self.Q = None
         self.mvDecoder = Synthesis_mv_net()
