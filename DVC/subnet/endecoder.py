@@ -348,9 +348,9 @@ def build_model():
     flow = flow[0].permute(1, 2, 0).detach().cpu().numpy()  # Shape: [H, W, 2]
     
     
-    flow_np = flow  # Already in NumPy format
+
     output_flow_path = 'flow_output.png'
-    save_vis_flow_tofile(flow_np, output_flow_path)
+    save_vis_flow_tofile(flow, output_flow_path)
 
     print(f"Optical flow saved to {output_flow_path}")
 
