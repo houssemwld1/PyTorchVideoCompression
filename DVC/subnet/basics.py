@@ -7,17 +7,17 @@ import math
 import time
 # from .resample2d_package.resample2d import Resample2d
 from six.moves import xrange
-import tensorflow as tf
+# import tensorflow as tf
 import numpy as np
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
 import torchvision
-from .GDN import GDN
+from GDN import GDN
 from torch.autograd import Variable
 import imageio
 import datetime
-from .flowlib import flow_to_image
+# from flowlib import flow_to_image
 
 out_channel_N = 64
 out_channel_M = 96
@@ -54,7 +54,7 @@ def relu(x):
 #     # return tf.nn.sigmoid(x,name='relu')
 
 
-from tensorflow.contrib.layers.python.layers import batch_norm as batch_norm
+# from tensorflow.contrib.layers.python.layers import batch_norm as batch_norm
 
 
 def yuv_import_444(filename, dims, numfrm, startfrm):

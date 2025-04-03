@@ -1,15 +1,18 @@
-from .basics import *
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from basics import *
 import numpy as np
 import imageio
-from .flowlib import flow_to_image
-from .flowlib import read_flow, evaluate_flow
+# from .flowlib import flow_to_image
+# from .flowlib import read_flow, evaluate_flow
 
-#### import for the new flow estimation
+#### Import for the new flow estimation
 import torch
 import unittest
-from gmflow.gmflowclass.GMFL  import GMFlowEstimator  # Absolute import
+from gmflow.gmflowclass.GMFL import GMFlowEstimator  # Absolute import
 from PIL import Image
-import numpy as np
 import os 
 from gmflow.utils.flow_viz import save_vis_flow_tofile
 ####
@@ -274,7 +277,7 @@ class ME_Spynet(nn.Module):
 
 
 
-
+import torch.nn as nn
 ### new optical flow # def ME_Ours(im1, im2):
 class ME_GMFlow(nn.Module):
     '''
@@ -333,54 +336,30 @@ class ME_GMFlow(nn.Module):
 
 def build_model():
 
-    net = ME_Spynet().cuda()
-    # inputImage1 = tf.placeholder(shape=[1,3, 448, 832], dtype=tf.float32, name="inputimage1")
-    # inputImage2 = tf.placeholder(shape=[1,3, 448, 832], dtype=tf.float32, name="inputimage2")
+    net = ME_GMFlow()
 
-    # # inputImage, inputRes, groudtruth
-    # flowfiled, warpframe = ME_Spynet(inputImage1, inputImage2)
-
-    # read images
-    im1 = imageio.imread('input.png')
-    im1 = im1 / 255.0
-    im1 = np.expand_dims(im1, axis=0)
-    im2 = imageio.imread('ref.png')
-    im2 = im2 / 255.0
-    im2 = np.expand_dims(im2, axis=0)
+    img1_path = './gmflow/demo/sintel_market_1/img1_batch.png'
+    img2_path = './gmflow/demo/sintel_market_1/img2_batch.png'
     
-    # means = np.array([0.485, 0.456, 0.406])
-    # stds = np.array([0.229, 0.224, 0.225])
-    # input_image = (input_image - means) / stds
-    # ref_image = (ref_image - means) / stds
-    im1 = np.transpose(im1, [0, 3, 1, 2])
-    im2 = np.transpose(im2, [0, 3, 1, 2])
-    im1 = torch.from_numpy(im1).float().cuda()
-    im2 = torch.from_numpy(im2).float().cuda()
+
+
     net.eval()
-    flow, warp_frame = net(im1, im2)
-    flow = flow.detach().cpu().numpy()
-    warp_frame = warp_frame.cpu().detach().numpy()
-    rgb_my = flow_to_image(flow[0, :, :, :])
-    imageio.imwrite('flow.png', rgb_my)
+    flow = net.forward(img1_path, img2_path)
+    flow = flow[0].permute(1, 2, 0).detach().cpu().numpy()  # Shape: [H, W, 2]
+    
+    
+    flow_np = flow  # Already in NumPy format
+    output_flow_path = 'flow_output.png'
+    save_vis_flow_tofile(flow_np, output_flow_path)
 
-    # # test spynet
-    # flowspy = read_flow('result_hevc.flo')
-    # flowspy_rgb = flow_to_image(flowspy)
-    # imageio.imwrite('test2.png', flowspy_rgb)
-    # psnr = CalcuPSNR(rgb_my / 255, flowspy_rgb / 255)
-    # # print(rgb_my)
-    # error = evaluate_flow(flow[0, :, :, :], flowspy)
-    # # print(flow[0,:,:,:])
-    # # print(flowspy)
-    # print(error)
+    print(f"Optical flow saved to {output_flow_path}")
 
-    # print(psnr)
-    imageio.imwrite('warp2.png', warp_frame[0, :, :, :].transpose(1,2,0))
-    # warp_frame_rgb = flow_warp(im2, flow)
-    psnrwapr = CalcuPSNR(im1[0].cpu().numpy().transpose(1,2,0), warp_frame[0, :, :, :].transpose(1,2,0))
-    print(psnrwapr)
+
 
 
 
 if __name__ == '__main__':
     build_model()
+    
+    
+    
