@@ -4,6 +4,16 @@ import imageio
 from .flowlib import flow_to_image
 from .flowlib import read_flow, evaluate_flow
 
+#### import for the new flow estimation
+import torch
+import unittest
+from gmflow.gmflowclass.GMFL  import GMFlowEstimator  # Absolute import
+from PIL import Image
+import numpy as np
+import os 
+from gmflow.utils.flow_viz import save_vis_flow_tofile
+####
+
 # from warp import tf_warp
 import sys
 # sys.path.append('/home/user321/tf_flownet2-master/FlowNet2_src/')
@@ -66,47 +76,7 @@ def torch_warp(tensorInput, tensorFlow):
     tensorFlow = torch.cat([tensorFlow[:, 0:1, :, :] / ((tensorInput.size(3) - 1.0) / 2.0), tensorFlow[:, 1:2, :, :] / ((tensorInput.size(2) - 1.0) / 2.0) ], 1)
 
     return torch.nn.functional.grid_sample(input=tensorInput, grid=(Backward_tensorGrid[device_id][str(tensorFlow.size())] + tensorFlow).permute(0, 2, 3, 1), mode='bilinear', padding_mode='border')
-# # end
-# Backward_tensorGrid = [{} for i in range(8)]
-# vgrids = {}
-# def torch_warp(x, flo):
-#     """
-#     warp an image/tensor (im2) back to im1, according to the optical flow
-#     x: [B, C, H, W] (im2)
-#     flo: [B, 2, H, W] flow
-#     """
-#     torch.backends.cudnn.enabled = True
-#     B, C, H, W = x.size()
-#     if str(x.size()) not in vgrids:
-#         # mesh grid 
-#         xx = torch.arange(0, W).view(1,-1).repeat(H,1)
-#         yy = torch.arange(0, H).view(-1,1).repeat(1,W)
-#         xx = xx.view(1,1,H,W).repeat(B,1,1,1)
-#         yy = yy.view(1,1,H,W).repeat(B,1,1,1)
-#         grid = torch.cat((xx,yy),1).float()
-#         # if x.is_cuda:
-#         grid = grid.cuda()
-#         vgrids[str(x.size())] = Variable(grid)
-#     vgrid = vgrids[str(x.size())] + flo
 
-#     # scale grid to [-1,1]
-#     vgrid[:,0,:,:] = 2.0*vgrid[:,0,:,:].clone() / max(W-1,1)-1.0
-#     vgrid[:,1,:,:] = 2.0*vgrid[:,1,:,:].clone() / max(H-1,1)-1.0
-#     vgrid = vgrid.permute(0,2,3,1)
-    
-
-#     output = torch.nn.functional.grid_sample(x, grid=vgrid, mode='bilinear', padding_mode='border')
-#     mask = torch.autograd.Variable(torch.ones(x.size())).cuda()
-#     mask = torch.nn.functional.grid_sample(mask, grid=vgrid, mode='bilinear', padding_mode='border')
-
-#     # if W==128:
-#         # np.save('mask.npy', mask.cpu().data.numpy())
-#         # np.save('warp.npy', output.cpu().data.numpy())
-    
-#     mask[mask<0.9999] = 0
-#     mask[mask>0] = 1
-
-#     return output*mask
 
 def log10(x):
     numerator = torch.log(x)
@@ -184,48 +154,6 @@ def bilinearupsacling2(inputfeature):
     outfeature = F.interpolate(inputfeature, (inputheight * 2, inputwidth * 2), mode='bilinear', align_corners=True)
     return outfeature
 
-
-# def bilinearupsacling2(inputfeature):
-#     inputheight = inputfeature.get_shape().as_list()[1]
-#     inputwidth = inputfeature.get_shape().as_list()[2]
-#     outfeature = tf.image.resize_images(inputfeature, [inputheight * 2, inputwidth * 2], align_corners=True)
-#     return outfeature
-
-
-# def conv2Block(layername,
-#                inputfeature,
-#                kernelSize,
-#                kernelNum,
-#                paddingType='SAME',
-#                stride=[1, 1, 1, 1],
-#                actFunc=tf.nn.relu,
-#                init=None):
-
-#     # get the inputchannel
-#     inputfeatureChannle = inputfeature.get_shape().as_list()[-1]
-
-#     if init == None:
-#         weights = tf.get_variable(
-#             name=layername + '_weights',
-#             shape=[kernelSize[0], kernelSize[1], inputfeatureChannle, kernelNum],
-#             dtype=tf.float32,
-#             initializer=tf.contrib.layers.xavier_initializer())
-#         biases = tf.get_variable(
-#             name=layername + '_biases', shape=[kernelNum], dtype=tf.float32, initializer=tf.constant_initializer(0.0))
-#     else:
-#         init_w, init_b = loadweightformnp(layername)
-#         weights = tf.get_variable(name=layername + '_weights', dtype=tf.float32, initializer=init_w)
-#         biases = tf.get_variable(name=layername + '_biases', dtype=tf.float32, trainable=True, initializer=init_b)
-
-#     PreActivation = tf.nn.conv2d(inputfeature, weights, stride, padding=paddingType, name=layername + '_conv')
-#     PreActivation = tf.nn.bias_add(PreActivation, biases, name=layername + '_addBiases')
-
-#     if not actFunc == None:
-#         activation = actFunc(PreActivation)
-#         return activation
-#     else:
-#         return PreActivation
-
 class ResBlock(nn.Module):
     def __init__(self, inputchannel, outputchannel, kernel_size, stride=1):
         super(ResBlock, self).__init__()
@@ -297,18 +225,6 @@ class Warp_net(nn.Module):
         return res
 
 
-# def Preprocessing(im):
-#     r, g, b = tf.split(im, 3, axis=3)
-#     b = b - 0.406
-#     g = g - 0.456
-#     r = r - 0.485
-#     b_v = b / 0.225
-#     g_v = g / 0.224
-#     r_v = r / 0.229
-
-#     rgb = tf.concat(values=[r_v, g_v, b_v], axis=3)
-#     return rgb
-
 flowfiledsSamples = [{} for i in range(8)]
 class ME_Spynet(nn.Module):
     '''
@@ -357,37 +273,62 @@ class ME_Spynet(nn.Module):
         return flowfileds
 
 
-# def ME_Ours(im1, im2):
-#     h_d = im1.get_shape().as_list()[1]
-#     w_d = im1.get_shape().as_list()[2]
 
-#     im1_d = tf.contrib.layers.avg_pool2d(im1, kernel_size=[4, 4], stride=[4, 4])
-#     im2_d = tf.contrib.layers.avg_pool2d(im2, kernel_size=[4, 4], stride=[4, 4])
-#     flow_d, _ = ME_Spynet(im1_d, im2_d)
-#     # feature extract...
-#     with tf.variable_scope('FeatureExtract', reuse=tf.AUTO_REUSE) as scope:
-#         c11 = conv2Block(layername='conv1a', inputfeature=im1, kernelNum=16, kernelSize=[3, 3], stride=[1, 1, 1, 1])
-#         c21 = conv2Block(layername='conv1a', inputfeature=im2, kernelNum=16, kernelSize=[3, 3], stride=[1, 1, 1, 1])
 
-#     with tf.variable_scope('GenerateFlow') as scope:
-#         flow_up = tf.image.resize_images(flow_d, [h_d, w_d], align_corners=True)
-#         c21_w = flow_warp(c21, flow_up)
+### new optical flow # def ME_Ours(im1, im2):
+class ME_GMFlow(nn.Module):
+    '''
+    Get optical flow using GMFlow instead of SPyNet
+    Takes image paths as input and returns optical flow
+    '''
+    def __init__(self, pretrained_path='./gmflow/pretrained/gmflow_things-e9887eda.pth'):
+        super(ME_GMFlow, self).__init__()
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        if not torch.cuda.is_available():
+            print("Warning: CUDA not available, running on CPU. This may be slow.")
+        
+        # Initialize GMFlowEstimator
+        self.model = GMFlowEstimator(
+            device=self.device,
+            resume=pretrained_path,
+            pred_bidir_flow=False,  # Unidirectional flow
+            fwd_bwd_consistency_check=False,
+            padding_factor=16,
+            inference_size=None
+        )
+        
+        # Ensure model is in evaluation mode
+        self.model.eval()
 
-#         c11 = conv2Block(
-#             layername='conv1a',
-#             inputfeature=tf.concat(values=[c11, c21_w], axis=3),
-#             kernelNum=16,
-#             kernelSize=[3, 3],
-#             stride=[1, 1, 1, 1],
-#             actFunc=leaky_relu)
+    def load_and_preprocess_image(self, img_path):
+        """Load and preprocess an image from a file path."""
+        if not os.path.exists(img_path):
+            raise FileNotFoundError(f"Image file not found: {img_path}")
+        
+        # Load image using PIL and convert to RGB
+        img = Image.open(img_path).convert('RGB')
+        
+        # Convert to tensor, normalize to [0, 1], and reshape to [1, 3, H, W]
+        img_tensor = torch.tensor(np.array(img).transpose(2, 0, 1)).unsqueeze(0).float() / 255.0
+        return img_tensor.to(self.device)
 
-#         flow_res = conv2Block(
-#             layername='conv2a', inputfeature=c11, kernelNum=2, kernelSize=[3, 3], stride=[1, 1, 1, 1], actFunc=None)
-#         flow = flow_res + flow_up
+    def forward(self, img1_path, img2_path):
+        """Compute optical flow between two images given their file paths."""
+        # Load and preprocess images
+        im1 = self.load_and_preprocess_image(img1_path)
+        im2 = self.load_and_preprocess_image(img2_path)
 
-#         warpframe = flow_warp(im2, flow)
+        # Compute optical flow
+        with torch.no_grad():  # No gradient computation needed
+            flow = self.model.forward(im1, im2)  # Shape: [1, 2, H, W]
 
-#     return flow, warpframe
+        return flow
+
+
+
+
+
+
 
 
 def build_model():
