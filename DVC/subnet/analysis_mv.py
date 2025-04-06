@@ -1,8 +1,8 @@
-from .basics import *
+from basics import *
 # import pickle
 # import os
 # import codecs
-from .analysis import Analysis_net
+from analysis import Analysis_net
 
 
 class Analysis_mv_net(nn.Module):
