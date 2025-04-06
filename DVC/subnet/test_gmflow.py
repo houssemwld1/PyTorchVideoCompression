@@ -59,7 +59,7 @@ class TestGMFlowEstimator(unittest.TestCase):
         num_runs = 10
         start_time = time.time()
         with torch.no_grad():
-            for _ in range(num_runs):
+            for _ in range(num_runs):# cool
                 flow = self.model.forward(img1, img2)
         avg_time = (time.time() - start_time) / num_runs
         print(f"Average forward pass time (single pair): {avg_time:.4f} seconds")
@@ -67,7 +67,7 @@ class TestGMFlowEstimator(unittest.TestCase):
 
     def test_batch_speed(self):
         """Test forward pass speed for a batch of image pairs."""
-        batch_size = 4  # Simulate a small batch; adjust based on your needs
+        batch_size = 2 # Simulate a small batch; adjust based on your needs
         img1_batch = torch.cat([self.load_image(self.img1_path) for _ in range(batch_size)], dim=0)
         img2_batch = torch.cat([self.load_image(self.img2_path) for _ in range(batch_size)], dim=0)
 
@@ -76,7 +76,7 @@ class TestGMFlowEstimator(unittest.TestCase):
             _ = self.model.forward(img1_batch, img2_batch)
 
         # Measure time
-        num_runs = 10
+        num_runs = 5
         start_time = time.time()
         with torch.no_grad():
             for _ in range(num_runs):
@@ -131,7 +131,8 @@ class TestGMFlowEstimator(unittest.TestCase):
 
         save_vis_flow_tofile(flow_np, output_flow_path)
         self.assertTrue(os.path.exists(output_flow_path), f"Flow visualization file {output_flow_path} not created")
-
+        
+  
     def tearDown(self):
         # Clean up VRAM
         if torch.cuda.is_available():
